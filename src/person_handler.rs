@@ -6,7 +6,11 @@ use std::convert::Infallible;
 pub async fn hello(_: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {
     let person = get_person();
     let response_text = format!("{}\n{}\n{}", person.name, person.age, person.description);
-    Ok(Response::new(Full::new(Bytes::from(response_text))))
+    let response = Response::builder()
+        .header(hyper::header::CONTENT_TYPE, "text/plain; charset=UTF-8")
+        .body(Full::new(Bytes::from(response_text)))
+        .unwrap();
+    Ok(response)
 }
 
 // Person構造体
