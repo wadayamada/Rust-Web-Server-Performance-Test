@@ -1,53 +1,43 @@
-use std::io::{Read, Write};
-use std::net::{TcpListener, TcpStream};
-use std::thread;
+use std::convert::Infallible;
+use std::net::SocketAddr;
 
-/// メインとなる関数
-fn main() -> std::io::Result<()> {
-    // 127.0.0.1:7878 で待ち受けるリスナーを生成
-    let listener = TcpListener::bind("127.0.0.1:7878")?;
+use http_body_util::Full;
+use hyper::body::Bytes;
+use hyper::server::conn::http1;
+use hyper::service::service_fn;
+use hyper::{Request, Response};
+use hyper_util::rt::TokioIo;
+use tokio::net::TcpListener;
 
-    println!("Server listening on http://127.0.0.1:7878/");
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let addr = SocketAddr::from(([0, 0, 0, 0], 8081));
 
-    // 接続が来るたびに handle_connection をスレッドで呼び出す
-    for stream in listener.incoming() {
-        match stream {
-            Ok(stream) => {
-                thread::spawn(|| {
-                    if let Err(e) = handle_connection(stream) {
-                        eprintln!("Failed to handle connection: {}", e);
-                    }
-                });
+    // We create a TcpListener and bind it to 127.0.0.1:3000
+    let listener = TcpListener::bind(addr).await?;
+
+    // We start a loop to continuously accept incoming connections
+    loop {
+        let (stream, _) = listener.accept().await?;
+
+        // Use an adapter to access something implementing `tokio::io` traits as if they implement
+        // `hyper::rt` IO traits.
+        let io = TokioIo::new(stream);
+
+        // Spawn a tokio task to serve multiple connections concurrently
+        tokio::task::spawn(async move {
+            // Finally, we bind the incoming connection to our `hello` service
+            if let Err(err) = http1::Builder::new()
+                // `service_fn` converts our function in a `Service`
+                .serve_connection(io, service_fn(hello))
+                .await
+            {
+                eprintln!("Error serving connection: {:?}", err);
             }
-            Err(e) => {
-                eprintln!("Connection failed: {}", e);
-            }
-        }
+        });
     }
-
-    Ok(())
 }
 
-/// クライアントとの通信を処理する関数
-fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
-    // リクエストを格納するバッファ
-    let mut buffer = [0; 1024];
-    // リクエストを読み出す
-    let bytes_read = stream.read(&mut buffer)?;
-
-    // 何かしらリクエストがある場合のみ処理する
-    if bytes_read > 0 {
-        // 簡単に HTTP のレスポンスを返す
-        let response = "HTTP/1.1 200 OK\r\n\
-                        Content-Type: text/plain; charset=UTF-8\r\n\
-                        Content-Length: 16\r\n\
-                        Connection: close\r\n\
-                        \r\n\
-                        Hello from Rust!";
-
-        stream.write_all(response.as_bytes())?;
-        stream.flush()?;
-    }
-
-    Ok(())
+async fn hello(_: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {
+    Ok(Response::new(Full::new(Bytes::from("Hello, World!"))))
 }

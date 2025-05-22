@@ -1,0 +1,17 @@
+FROM rust:latest
+
+# 作業ディレクトリを設定
+WORKDIR /app
+
+# Cargo.tomlやソースコードをコピー
+COPY Cargo.toml Cargo.lock ./
+COPY src ./src
+
+# ビルド (--release オプションで最適化)
+RUN cargo build --release
+
+# ホストから見て8081番ポートを開放
+EXPOSE 8081
+
+# コンテナ起動時に実行するコマンド
+CMD ["./target/release/rust-web-server-performance-test"]
