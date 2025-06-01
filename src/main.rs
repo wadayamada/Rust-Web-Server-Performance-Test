@@ -3,57 +3,11 @@ mod not_escape;
 mod heap_alloc;
 
 use std::env;
-use std::net::SocketAddr;
-
-// use crate::person_handler::hello;
-// use crate::person_handler::parse_handler;
-// use hyper::server::conn::http1;
-// use hyper::service::service_fn;
-// use hyper_util::rt::TokioIo;
-// use tokio::net::TcpListener;
 use crate::not_escape::build_large_response_item;
 use crate::heap_alloc::build_large_response;
 use sysinfo::{System, SystemExt, PidExt, ProcessExt};
 
-// #[tokio::main]
-// async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-//     let addr = SocketAddr::from(([0, 0, 0, 0], 8081));
-//
-//     // We create a TcpListener and bind it to 127.0.0.1:3000
-//     let listener = TcpListener::bind(addr).await?;
-//
-//     // We start a loop to continuously accept incoming connections
-//     loop {
-//         let (stream, _) = listener.accept().await?;
-//
-//         // Use an adapter to access something implementing `tokio::io` traits as if they implement
-//         // `hyper::rt` IO traits.
-//         let io = TokioIo::new(stream);
-//
-//         // Spawn a tokio task to serve multiple connections concurrently
-//         tokio::task::spawn(async move {
-//             // Finally, we bind the incoming connection to our `hello` service
-//             if let Err(err) = http1::Builder::new()
-//                 // `service_fn` converts our function in a `Service`
-//                 // .serve_connection(io, service_fn(hello))
-//                 .serve_connection(io, service_fn(parse_handler))
-//                 .await
-//             {
-//                 eprintln!("Error serving connection: {:?}", err);
-//             }
-//         });
-//     }
-// }
-
 use std::time::Instant;
-
-/// 長寿オブジェクトの例として Person 構造体を残しておく
-pub struct Person {
-    pub name: String,
-    pub age: i32,
-    pub description: String,
-}
-
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     const RUNS: usize = 1000;      // 繰り返し回数
@@ -92,23 +46,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     println!("Average over {} runs: {:.6} seconds", RUNS, total / RUNS as f64);
-
-    /* --- 並列で走らせたい場合は↓に差し替え -----------------
-    use futures::future::join_all;
-
-    const PAR: usize = 8;           // 同時並列数
-    const TOTAL: usize = 100;       // 総タスク数
-
-    let mut tasks = Vec::with_capacity(TOTAL);
-    for _ in 0..TOTAL {
-        tasks.push(tokio::spawn(build_large_response()));
-    }
-
-    let start = Instant::now();
-    let _results = join_all(tasks).await;
-    let elapsed = start.elapsed().as_secs_f64();
-    println!("{} parallel tasks finished in {:.6} seconds", TOTAL, elapsed);
-    -----------------------------------------------------------*/
 
     Ok(())
 }
